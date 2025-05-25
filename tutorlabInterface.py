@@ -215,8 +215,7 @@ def admin():
             cur=con.cursor()
             idOfClass=str(input("What is the class id?: "))
             #SELECT date, COUNT(DISTINCT student_email_id) FROM session_attendance WHERE class_id = 'MATH-221' GROUP BY date;
-            stringToExec="SELECT date, COUNT(DISTINCT student_email_id) FROM session_attendance WHERE class_id ILIKE '"+idOfClass+ "' GROUP BY date;"
-            cur.execute(stringToExec)
+            cur.execute("SELECT date, COUNT(DISTINCT student_email_id) FROM session_attendance WHERE class_id ILIKE %s GROUP BY date;",(idOfClass,))
             rows=cur.fetchall()
             head=["Date","Number Of Students"]
             print(tabulate(rows,headers=head,tablefmt="fancy_grid"))
@@ -244,15 +243,17 @@ def admin():
             con=connect_db()
             cur=con.cursor()
             #SELECT COUNT(DISTINCT student_email_id), class_id,MIN(date) FROM session_attendance WHERE class_id IN (SELECT class_id FROM enrollment WHERE professor = 'Professor Olivia Davis') AND (date<'2024-12-30' AND date>'2024-08-01') GROUP BY class_id;
-            nameOfProf=str(input("What is the name of the professor?: "))
+            nameOfProf="%"+str(input("What is the name of the professor?: "))
             isSemFall=str(input("Is the semester you are looking for the fall or spring semester? If it is the Fall type f. If not type anything.: "))
             whatYear=str(input("What year is the semester you want to get data from? Type the year as a number: "))
-            execString="SELECT COUNT(DISTINCT student_email_id), class_id,MIN(date) FROM session_attendance WHERE class_id IN (SELECT class_id FROM enrollment WHERE professor ILIKE '"+ "%"+ nameOfProf +"') AND (date<'"
             if isSemFall=="f":
-                execString=execString+whatYear+"-12-30' AND date>'"+whatYear+"-08-01') GROUP BY class_id;"
+                startDate=f"{whatYear}-08-01"
+                endDate=f"{whatYear}-12-30"
+                cur.execute("SELECT COUNT(DISTINCT student_email_id), class_id,MIN(date) FROM session_attendance WHERE class_id IN (SELECT class_id FROM enrollment WHERE professor ILIKE %s) AND (date<%s AND date>%s) GROUP BY class_id;",(nameOfProf,endDate,startDate))
             else:
-                execString=execString+whatYear+"-05-30' AND date>'"+whatYear+"-01-01') GROUP BY class_id;"
-            cur.execute(execString)
+                startDate=f"{whatYear}-01-01"
+                endDate=f"{whatYear}-05-30"
+                cur.execute("SELECT COUNT(DISTINCT student_email_id), class_id,MIN(date) FROM session_attendance WHERE class_id IN (SELECT class_id FROM enrollment WHERE professor ILIKE %s) AND (date<%s AND date>%s) GROUP BY class_id;",(nameOfProf,endDate,startDate))
             rows=cur.fetchall()
             newTable=[[row[i] for i in range(len(row)) if i != 2] for row in rows]#I had to get help from microsoft copilot because I want the new table to not have the useless column. It taught me how to concatenate a list in python
             head=["Number Of Students","Class ID"]#I am concatenating a list within a list as a mentioned above, it is quite difficult to write this so I had to get help.
@@ -494,9 +495,6 @@ def admin():
 while True:
     selectRole=str(input("Enter s if you are a student, t if you are a tutor, and a if you are an admin. If you want to exit enter q.: "))
     if selectRole=="s":
-        confirmAccident=input("If you accidentally selected then press y else press any key: ")
-        if confirmAccident=="y":
-            break
         print("If this is you first time using math tutoring services sign up by entering 1.")
         print("If you want to sign in or sign out to math tutoring enter 2.")
         studentChoice=get_valid_integer("Enter you choice: ",1,2)
@@ -505,9 +503,6 @@ while True:
         elif studentChoice==2:
             sessionAttend()
     elif selectRole=="t":
-        confirmAccident=input("If you accidentally selected then press y else press any key: ")
-        if confirmAccident=="y":
-            break
         print("If you are a new tutor sign up by entering 1.")
         print("If you want to clock in or clock out of your job enter 2.")
         tutorChoice=get_valid_integer("Enter your choice: ",1,2)
@@ -516,9 +511,6 @@ while True:
         elif tutorChoice==2:
             tutorAttend()
     elif selectRole=="a":
-        confirmAccident=input("If you accidentally selected then press y else press any key: ")
-        if confirmAccident=="y":
-            break
         admin()
     elif selectRole=="q":
         print("Exiting program.")
